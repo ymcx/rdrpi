@@ -1,8 +1,9 @@
 <title>RDRPI</title>
 <form method="post" action="/set_stream">
   <select name="selection" onchange="form.submit()">
+    <option value="0" {% if 0 == selection %}selected{% endif %}>Select a stream...</option>
     {% for stream in streams %}
-      <option value="{{ loop.index0 }}" {% if loop.index0 == selection %}selected{% endif %}>{{ stream }}</option>
+      <option value="{{ loop.index }}" {% if loop.index == selection %}selected{% endif %}>{{ stream }}</option>
     {% endfor %}
   </select>
 </form>

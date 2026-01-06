@@ -68,8 +68,12 @@ async fn set_stream(
         process.kill().await.unwrap();
     }
 
-    let stream = STREAMS[form.selection].1;
     state.selection = form.selection;
+    if form.selection == 0 {
+        return Redirect::to("/");
+    }
+
+    let stream = STREAMS[form.selection - 1].1;
     state.process = Command::new("ffmpeg")
         .args(["-vn", "-f", "pulse", "default", "-v", "quiet", "-i", stream])
         .spawn()
@@ -93,12 +97,24 @@ async fn set_volume(
     Redirect::to("/")
 }
 
+async fn get_volume() -> u8 {
+    let process = Command::new("wpctl")
+        .args(["get-volume", "@DEFAULT_SINK@"])
+        .output()
+        .await
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&process.stdout);
+    let volume = stdout[8..12].replace('.', "");
+
+    volume.parse().unwrap()
+}
+
 #[tokio::main]
 async fn main() {
     let state = Arc::new(Mutex::new(AppState {
         process: None,
         selection: 0,
-        volume: 0,
+        volume: get_volume().await,
     }));
     let app = Router::new()
         .route("/", routing::get(index))
