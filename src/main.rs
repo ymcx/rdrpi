@@ -1,3 +1,4 @@
+use crate::types::{AppState, IndexTemplate, StreamForm, VolumeForm};
 use askama::Template;
 use axum::{
     Form, Router,
@@ -5,51 +6,16 @@ use axum::{
     response::{Html, Redirect},
     routing,
 };
-use serde::Deserialize;
 use std::{error::Error, sync::Arc};
-use tokio::{net::TcpListener, process::Child, sync::Mutex};
+use tokio::{net::TcpListener, sync::Mutex};
 
 mod io;
-
-const STREAMS: &[(&str, &str)] = &[
-    (
-        "Yle Radio Suomi",
-        "https://yleradiolive.akamaized.net/hls/live/2027675/in-YleRS/256/variant.m3u8",
-    ),
-    (
-        "YleX",
-        "https://yleradiolive.akamaized.net/hls/live/2027674/in-YleX/256/variant.m3u8",
-    ),
-];
-
-struct AppState {
-    process: Option<Child>,
-    selection: usize,
-    volume: u8,
-}
-
-#[derive(Template)]
-#[template(path = "index.html")]
-struct IndexTemplate {
-    streams: Vec<String>,
-    selection: usize,
-    volume: u8,
-}
-
-#[derive(Deserialize)]
-struct VolumeForm {
-    volume: u8,
-}
-
-#[derive(Deserialize)]
-struct StreamForm {
-    selection: usize,
-}
+mod types;
 
 async fn index(State(state): State<Arc<Mutex<AppState>>>) -> Html<String> {
     let state = state.lock().await;
     let template = IndexTemplate {
-        streams: STREAMS.iter().map(|(i, _)| i.to_string()).collect(),
+        streams: state.streams.iter().map(|(i, _)| i.to_string()).collect(),
         selection: state.selection,
         volume: state.volume,
     };
@@ -68,8 +34,8 @@ async fn set_stream(
 
     state.selection = form.selection;
     if form.selection != 0 {
-        let stream = STREAMS[form.selection - 1].1;
-        let process = io::set_stream(stream).unwrap();
+        let stream = state.streams.get(form.selection - 1).unwrap().1.to_string();
+        let process = io::set_stream(&stream).unwrap();
         state.process = Some(process);
     }
 
@@ -101,6 +67,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let state = Arc::new(Mutex::new(AppState {
         process: None,
         selection: 0,
+        streams: io::parse_streams()?,
         volume: io::get_volume().await?,
     }));
     let app = Router::new()

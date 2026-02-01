@@ -1,4 +1,10 @@
-use std::{env, error::Error, fs};
+use crate::types::Stream;
+use std::{
+    env,
+    error::Error,
+    fs::{self, File},
+    io::BufReader,
+};
 use tokio::process::{Child, Command};
 
 fn get_argument_value(
@@ -63,4 +69,13 @@ pub fn program_exists(program: &str) -> Result<(), Box<dyn Error>> {
     }
 
     Err(format!("Couldn't find {program}, is it installed?").into())
+}
+
+pub fn parse_streams() -> Result<Vec<(String, String)>, Box<dyn Error>> {
+    let file = File::open("streams.json")?;
+    let reader = BufReader::new(file);
+    let streams: Vec<Stream> = serde_json::from_reader(reader)?;
+    let streams = streams.into_iter().map(|i| (i.name, i.address)).collect();
+
+    Ok(streams)
 }
