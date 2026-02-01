@@ -4,7 +4,7 @@ A lightweight web‑based internet radio that runs an async HTTP server with Axu
 
 # Usage
 
-You can set a custom ip-address/port using the --ip and --port arguments along with their shorter counterparts -i and -p.
+You can set a custom ip-address/port using the --ip and --port arguments along with their shorter counterparts -i and -p. The stream file location can be changed via the -f and --file arguments.
 
 ```
 $ cargo run --release

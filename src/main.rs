@@ -34,6 +34,24 @@ async fn add_stream(
     state.streams = streams;
     io::write_streams(&state.stream_file, &state.streams).unwrap();
 
+    state.selection = state.streams.len();
+
+    Redirect::to("/")
+}
+
+async fn delete_stream(State(state): State<Arc<Mutex<AppState>>>) -> Redirect {
+    let mut state = state.lock().await;
+    if state.selection != 0 {
+        let mut streams = state.streams.clone();
+        streams.remove(state.selection - 1);
+
+        state.streams = streams;
+        io::write_streams(&state.stream_file, &state.streams).unwrap();
+
+        let should_decrease = state.streams.len() == 0 || state.selection != 1;
+        state.selection -= if should_decrease { 1 } else { 0 };
+    }
+
     Redirect::to("/")
 }
 
@@ -88,6 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let app = Router::new()
         .route("/", routing::get(index))
         .route("/add_stream", routing::post(add_stream))
+        .route("/delete_stream", routing::post(delete_stream))
         .route("/set_stream", routing::post(set_stream))
         .route("/set_volume", routing::post(set_volume))
         .with_state(state);

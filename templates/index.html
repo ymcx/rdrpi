@@ -32,6 +32,10 @@
             <button onclick="add_stream()">Add a stream</button>
         </form>
 
+        <form method="post" id="delete_stream" action="/delete_stream">
+            <button onclick="form.submit()">Delete the selected stream</button>
+        </form>
+
         <form method="post" id="set_volume" action="/set_volume">
             <input type="range" min="0" max="100" value="{{ volume }}" name="volume" onchange="form.submit()">
         </form>
