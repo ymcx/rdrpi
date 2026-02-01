@@ -1,4 +1,4 @@
-use crate::types::{AppState, IndexTemplate, StreamForm, VolumeForm};
+use crate::types::{AppState, Index, SetStream, SetVolume, Stream};
 use askama::Template;
 use axum::{
     Form, Router,
@@ -14,7 +14,7 @@ mod types;
 
 async fn index(State(state): State<Arc<Mutex<AppState>>>) -> Html<String> {
     let state = state.lock().await;
-    let template = IndexTemplate {
+    let template = Index {
         streams: state.streams.iter().map(|(i, _)| i.to_string()).collect(),
         selection: state.selection,
         volume: state.volume,
@@ -23,9 +23,23 @@ async fn index(State(state): State<Arc<Mutex<AppState>>>) -> Html<String> {
     Html::from(template.render().unwrap())
 }
 
+async fn add_stream(
+    State(state): State<Arc<Mutex<AppState>>>,
+    Form(form): Form<Stream>,
+) -> Redirect {
+    let mut state = state.lock().await;
+    let mut streams = state.streams.clone();
+    streams.push((form.name, form.address));
+
+    state.streams = streams;
+    io::write_streams(&state.streams).unwrap();
+
+    Redirect::to("/")
+}
+
 async fn set_stream(
     State(state): State<Arc<Mutex<AppState>>>,
-    Form(form): Form<StreamForm>,
+    Form(form): Form<SetStream>,
 ) -> Redirect {
     let mut state = state.lock().await;
     if let Some(process) = &mut state.process {
@@ -44,7 +58,7 @@ async fn set_stream(
 
 async fn set_volume(
     State(state): State<Arc<Mutex<AppState>>>,
-    Form(form): Form<VolumeForm>,
+    Form(form): Form<SetVolume>,
 ) -> Redirect {
     state.lock().await.volume = form.volume;
     io::set_volume(form.volume).unwrap();
@@ -67,11 +81,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let state = Arc::new(Mutex::new(AppState {
         process: None,
         selection: 0,
-        streams: io::parse_streams()?,
+        streams: io::read_streams()?,
         volume: io::get_volume().await?,
     }));
     let app = Router::new()
         .route("/", routing::get(index))
+        .route("/add_stream", routing::post(add_stream))
         .route("/set_stream", routing::post(set_stream))
         .route("/set_volume", routing::post(set_volume))
         .with_state(state);

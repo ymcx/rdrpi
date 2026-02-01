@@ -1,5 +1,5 @@
 use askama::Template;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::process::Child;
 
 pub struct AppState {
@@ -11,23 +11,23 @@ pub struct AppState {
 
 #[derive(Template)]
 #[template(path = "index.html")]
-pub struct IndexTemplate {
+pub struct Index {
     pub streams: Vec<String>,
     pub selection: usize,
     pub volume: u8,
 }
 
 #[derive(Deserialize)]
-pub struct VolumeForm {
+pub struct SetVolume {
     pub volume: u8,
 }
 
 #[derive(Deserialize)]
-pub struct StreamForm {
+pub struct SetStream {
     pub selection: usize,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Stream {
     pub name: String,
     pub address: String,

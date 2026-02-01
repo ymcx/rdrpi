@@ -3,7 +3,7 @@ use std::{
     env,
     error::Error,
     fs::{self, File},
-    io::BufReader,
+    io::{BufReader, BufWriter},
 };
 use tokio::process::{Child, Command};
 
@@ -71,11 +71,27 @@ pub fn program_exists(program: &str) -> Result<(), Box<dyn Error>> {
     Err(format!("Couldn't find {program}, is it installed?").into())
 }
 
-pub fn parse_streams() -> Result<Vec<(String, String)>, Box<dyn Error>> {
+pub fn read_streams() -> Result<Vec<(String, String)>, Box<dyn Error>> {
     let file = File::open("streams.json")?;
     let reader = BufReader::new(file);
     let streams: Vec<Stream> = serde_json::from_reader(reader)?;
     let streams = streams.into_iter().map(|i| (i.name, i.address)).collect();
 
     Ok(streams)
+}
+
+pub fn write_streams(streams: &Vec<(String, String)>) -> Result<(), Box<dyn Error>> {
+    let streams: Vec<Stream> = streams
+        .iter()
+        .map(|(name, address)| Stream {
+            name: name.to_string(),
+            address: address.to_string(),
+        })
+        .collect();
+
+    let file = File::create("streams.json")?;
+    let writer = BufWriter::new(file);
+    serde_json::to_writer_pretty(writer, &streams)?;
+
+    Ok(())
 }

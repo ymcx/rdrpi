@@ -1,12 +1,39 @@
-<title>RDRPI</title>
-<form method="post" action="/set_stream">
-  <select name="selection" onchange="form.submit()">
-    <option value="0" {% if 0 == selection %}selected{% endif %}>Select a stream...</option>
-    {% for stream in streams %}
-      <option value="{{ loop.index }}" {% if loop.index == selection %}selected{% endif %}>{{ stream }}</option>
-    {% endfor %}
-  </select>
-</form>
-<form method="post" action="/set_volume">
-  <input type="range" min="0" max="100" value="{{ volume }}" name="volume" onchange="form.submit()">
-</form>
+<html>
+    <head>
+        <title>RDRPI</title>
+        <script>
+            function add_stream() {
+                const name = prompt("Enter the display name of the scream", "")
+                if (!name) return
+
+                const address = prompt("Enter the address of the stream", "")
+                if (!address) return
+
+                document.getElementById("name").value = name
+                document.getElementById("address").value = address
+                document.getElementById("add_stream").submit()
+            }
+        </script>
+    </head>
+
+    <body>
+        <form method="post" id="set_stream" action="/set_stream">
+            <select name="selection" onchange="form.submit()">
+                <option value="0" {% if selection == 0 %}selected{% endif %}>Select a stream...</option>
+                {% for stream in streams %}
+                    <option value="{{ loop.index }}" {% if loop.index == selection %}selected{% endif %}>{{ stream }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        <form method="post" id="add_stream" action="/add_stream">
+            <input type="hidden" name="address" id="address">
+            <input type="hidden" name="name" id="name">
+            <button onclick="add_stream()">Add a stream</button>
+        </form>
+
+        <form method="post" id="set_volume" action="/set_volume">
+            <input type="range" min="0" max="100" value="{{ volume }}" name="volume" onchange="form.submit()">
+        </form>
+    </body>
+</html>
