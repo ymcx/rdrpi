@@ -5,6 +5,7 @@ use tokio::process::Child;
 pub struct AppState {
     pub process: Option<Child>,
     pub selection: usize,
+    pub stream_file: String,
     pub streams: Vec<(String, String)>,
     pub volume: u8,
 }

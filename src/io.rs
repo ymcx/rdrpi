@@ -22,12 +22,13 @@ fn get_argument_value(
         })
 }
 
-pub fn get_arguments() -> (String, String) {
+pub fn get_arguments() -> (String, String, String) {
     let arguments: Vec<String> = env::args().skip(1).collect();
     let ip = get_argument_value(&arguments, "-i", "--ip").unwrap_or("0.0.0.0".to_string());
     let port = get_argument_value(&arguments, "-p", "--port").unwrap_or("8080".to_string());
+    let file = get_argument_value(&arguments, "-f", "--file").unwrap_or("streams.json".to_string());
 
-    (ip, port)
+    (ip, port, file)
 }
 
 pub fn set_stream(stream: &str) -> Result<Child, Box<dyn Error>> {
@@ -71,8 +72,8 @@ pub fn program_exists(program: &str) -> Result<(), Box<dyn Error>> {
     Err(format!("Couldn't find {program}, is it installed?").into())
 }
 
-pub fn read_streams() -> Result<Vec<(String, String)>, Box<dyn Error>> {
-    let file = File::open("streams.json")?;
+pub fn read_streams(stream_file: &str) -> Result<Vec<(String, String)>, Box<dyn Error>> {
+    let file = File::open(stream_file)?;
     let reader = BufReader::new(file);
     let streams: Vec<Stream> = serde_json::from_reader(reader)?;
     let streams = streams.into_iter().map(|i| (i.name, i.address)).collect();
@@ -80,7 +81,10 @@ pub fn read_streams() -> Result<Vec<(String, String)>, Box<dyn Error>> {
     Ok(streams)
 }
 
-pub fn write_streams(streams: &Vec<(String, String)>) -> Result<(), Box<dyn Error>> {
+pub fn write_streams(
+    stream_file: &str,
+    streams: &Vec<(String, String)>,
+) -> Result<(), Box<dyn Error>> {
     let streams: Vec<Stream> = streams
         .iter()
         .map(|(name, address)| Stream {
@@ -89,7 +93,7 @@ pub fn write_streams(streams: &Vec<(String, String)>) -> Result<(), Box<dyn Erro
         })
         .collect();
 
-    let file = File::create("streams.json")?;
+    let file = File::create(stream_file)?;
     let writer = BufWriter::new(file);
     serde_json::to_writer_pretty(writer, &streams)?;
 

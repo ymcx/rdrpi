@@ -32,7 +32,7 @@ async fn add_stream(
     streams.push((form.name, form.address));
 
     state.streams = streams;
-    io::write_streams(&state.streams).unwrap();
+    io::write_streams(&state.stream_file, &state.streams).unwrap();
 
     Redirect::to("/")
 }
@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     io::program_exists("ffmpeg")?;
     io::program_exists("wpctl")?;
 
-    let (ip, port) = io::get_arguments();
+    let (ip, port, stream_file) = io::get_arguments();
     let address = format!("{ip}:{port}");
     let listener = TcpListener::bind(&address).await;
     if listener.is_err() {
@@ -81,7 +81,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let state = Arc::new(Mutex::new(AppState {
         process: None,
         selection: 0,
-        streams: io::read_streams()?,
+        stream_file: stream_file.to_string(),
+        streams: io::read_streams(&stream_file)?,
         volume: io::get_volume().await?,
     }));
     let app = Router::new()
