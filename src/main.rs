@@ -7,11 +7,9 @@ use axum::{
 };
 use serde::Deserialize;
 use std::sync::Arc;
-use tokio::{
-    net::TcpListener,
-    process::{Child, Command},
-    sync::Mutex,
-};
+use tokio::{net::TcpListener, process::Child, sync::Mutex};
+
+mod io;
 
 const STREAMS: &[(&str, &str)] = &[
     (
@@ -69,15 +67,10 @@ async fn set_stream(
     }
 
     state.selection = form.selection;
-    if form.selection == 0 {
-        return Redirect::to("/");
+    if form.selection != 0 {
+        let stream = STREAMS[form.selection - 1].1;
+        state.process = io::set_stream(stream);
     }
-
-    let stream = STREAMS[form.selection - 1].1;
-    state.process = Command::new("ffmpeg")
-        .args(["-vn", "-f", "pulse", "default", "-v", "quiet", "-i", stream])
-        .spawn()
-        .ok();
 
     Redirect::to("/")
 }
@@ -87,34 +80,25 @@ async fn set_volume(
     Form(form): Form<VolumeForm>,
 ) -> Redirect {
     state.lock().await.volume = form.volume;
-
-    let volume = (form.volume as f32 / 100.0).to_string();
-    Command::new("wpctl")
-        .args(["set-volume", "@DEFAULT_SINK@", &volume])
-        .spawn()
-        .unwrap();
+    io::set_volume(form.volume);
 
     Redirect::to("/")
 }
 
-async fn get_volume() -> u8 {
-    let process = Command::new("wpctl")
-        .args(["get-volume", "@DEFAULT_SINK@"])
-        .output()
-        .await
-        .unwrap();
-    let stdout = String::from_utf8_lossy(&process.stdout);
-    let volume = stdout[8..12].replace('.', "");
-
-    volume.parse().unwrap()
-}
-
 #[tokio::main]
 async fn main() {
+    let (ip, port) = io::get_arguments();
+    let address = format!("{ip}:{port}");
+    let listener = TcpListener::bind(&address).await;
+
+    if listener.is_err() {
+        return eprintln!("Couldn't bind to port {port}");
+    }
+
     let state = Arc::new(Mutex::new(AppState {
         process: None,
         selection: 0,
-        volume: get_volume().await,
+        volume: io::get_volume().await,
     }));
     let app = Router::new()
         .route("/", routing::get(index))
@@ -122,6 +106,6 @@ async fn main() {
         .route("/set_volume", routing::post(set_volume))
         .with_state(state);
 
-    let listener = TcpListener::bind("0.0.0.0:80").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    println!("Running RDRPI @ http://{address}");
+    axum::serve(listener.unwrap(), app).await.unwrap();
 }

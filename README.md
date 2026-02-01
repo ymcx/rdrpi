@@ -4,11 +4,21 @@ A lightweight web‑based internet radio that runs an async HTTP server with Axu
 
 # Usage
 
-Before launching the application, run setcap to allow it to bind to port 80.
+You can set a custom ip-address/port using the --ip and --port arguments along with their shorter counterparts -i and -p.
 
 ```
-cargo build --release
-sudo setcap cap_net_bind_service=ep target/release/RDRPI
-./target/release/RDRPI &
-xdg-open "http://127.0.0.1"
+$ cargo run --release
+Running RDRPI @ http://0.0.0.0:8080
+```
+
+# Couldn't bind to port 80
+
+Before launching the application, run setcap to allow it to bind to port 80. You'll need to do this each time after compiling the binary.
+
+```
+$ cargo run --release -- --port 80
+Couldn't bind to port 80
+$ sudo setcap cap_net_bind_service=ep target/release/RDRPI
+$ cargo run --release -- --port 80
+Running RDRPI @ http://0.0.0.0:80
 ```
