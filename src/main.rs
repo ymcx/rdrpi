@@ -7,7 +7,10 @@ use axum::{
     routing,
 };
 use std::{error::Error, sync::Arc};
-use tokio::{net::TcpListener, sync::Mutex};
+use tokio::{
+    net::TcpListener,
+    sync::{Mutex, MutexGuard},
+};
 
 mod io;
 mod types;
@@ -23,6 +26,25 @@ async fn index(State(state): State<Arc<Mutex<AppState>>>) -> Html<String> {
     Html::from(template.render().unwrap())
 }
 
+async fn update_stream(state: &mut MutexGuard<'_, AppState>) -> Result<(), Box<dyn Error>> {
+    if let Some(process) = &mut state.process {
+        process.kill().await?;
+    }
+
+    if state.selection != 0 {
+        let stream = state
+            .streams
+            .get(state.selection - 1)
+            .unwrap()
+            .1
+            .to_string();
+        let process = io::set_stream(&stream)?;
+        state.process = Some(process);
+    }
+
+    Ok(())
+}
+
 async fn add_stream(
     State(state): State<Arc<Mutex<AppState>>>,
     Form(form): Form<Stream>,
@@ -32,9 +54,9 @@ async fn add_stream(
     streams.push((form.name, form.address));
 
     state.streams = streams;
-    io::write_streams(&state.stream_file, &state.streams).unwrap();
-
     state.selection = state.streams.len();
+    io::write_streams(&state.stream_file, &state.streams).unwrap();
+    update_stream(&mut state).await.unwrap();
 
     Redirect::to("/")
 }
@@ -46,10 +68,10 @@ async fn delete_stream(State(state): State<Arc<Mutex<AppState>>>) -> Redirect {
         streams.remove(state.selection - 1);
 
         state.streams = streams;
-        io::write_streams(&state.stream_file, &state.streams).unwrap();
-
         let should_decrease = state.streams.len() == 0 || state.selection != 1;
         state.selection -= if should_decrease { 1 } else { 0 };
+        io::write_streams(&state.stream_file, &state.streams).unwrap();
+        update_stream(&mut state).await.unwrap();
     }
 
     Redirect::to("/")
@@ -60,16 +82,8 @@ async fn set_stream(
     Form(form): Form<SetStream>,
 ) -> Redirect {
     let mut state = state.lock().await;
-    if let Some(process) = &mut state.process {
-        process.kill().await.unwrap();
-    }
-
     state.selection = form.selection;
-    if form.selection != 0 {
-        let stream = state.streams.get(form.selection - 1).unwrap().1.to_string();
-        let process = io::set_stream(&stream).unwrap();
-        state.process = Some(process);
-    }
+    update_stream(&mut state).await.unwrap();
 
     Redirect::to("/")
 }
