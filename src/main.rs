@@ -6,7 +6,7 @@ use axum::{
     routing,
 };
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 use tokio::{net::TcpListener, process::Child, sync::Mutex};
 
 mod io;
@@ -69,7 +69,8 @@ async fn set_stream(
     state.selection = form.selection;
     if form.selection != 0 {
         let stream = STREAMS[form.selection - 1].1;
-        state.process = io::set_stream(stream);
+        let process = io::set_stream(stream).unwrap();
+        state.process = Some(process);
     }
 
     Redirect::to("/")
@@ -80,25 +81,27 @@ async fn set_volume(
     Form(form): Form<VolumeForm>,
 ) -> Redirect {
     state.lock().await.volume = form.volume;
-    io::set_volume(form.volume);
+    io::set_volume(form.volume).unwrap();
 
     Redirect::to("/")
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn Error>> {
+    io::program_exists("ffmpeg")?;
+    io::program_exists("wpctl")?;
+
     let (ip, port) = io::get_arguments();
     let address = format!("{ip}:{port}");
     let listener = TcpListener::bind(&address).await;
-
     if listener.is_err() {
-        return eprintln!("Couldn't bind to port {port}");
+        return Err(format!("Couldn't bind to port {port}").into());
     }
 
     let state = Arc::new(Mutex::new(AppState {
         process: None,
         selection: 0,
-        volume: io::get_volume().await,
+        volume: io::get_volume().await?,
     }));
     let app = Router::new()
         .route("/", routing::get(index))
@@ -107,5 +110,7 @@ async fn main() {
         .with_state(state);
 
     println!("Running RDRPI @ http://{address}");
-    axum::serve(listener.unwrap(), app).await.unwrap();
+    axum::serve(listener?, app).await?;
+
+    Ok(())
 }

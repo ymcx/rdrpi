@@ -17,7 +17,7 @@ Before launching the application, run setcap to allow it to bind to port 80. You
 
 ```
 $ cargo run --release -- --port 80
-Couldn't bind to port 80
+Error: "Couldn't bind to port 80"
 $ sudo setcap cap_net_bind_service=ep target/release/RDRPI
 $ cargo run --release -- --port 80
 Running RDRPI @ http://0.0.0.0:80

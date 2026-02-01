@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, error::Error, fs};
 use tokio::process::{Child, Command};
 
 fn get_argument_value(
@@ -24,29 +24,43 @@ pub fn get_arguments() -> (String, String) {
     (ip, port)
 }
 
-pub fn set_stream(stream: &str) -> Option<Child> {
-    Command::new("ffmpeg")
+pub fn set_stream(stream: &str) -> Result<Child, Box<dyn Error>> {
+    let process = Command::new("ffmpeg")
         .args(["-vn", "-f", "pulse", "default", "-v", "quiet", "-i", stream])
-        .spawn()
-        .ok()
+        .spawn()?;
+
+    Ok(process)
 }
 
-pub fn set_volume(volume: u8) {
+pub fn set_volume(volume: u8) -> Result<(), Box<dyn Error>> {
     let volume = (volume as f32 / 100.0).to_string();
     Command::new("wpctl")
         .args(["set-volume", "@DEFAULT_SINK@", &volume])
-        .spawn()
-        .unwrap();
+        .spawn()?;
+
+    Ok(())
 }
 
-pub async fn get_volume() -> u8 {
+pub async fn get_volume() -> Result<u8, Box<dyn Error>> {
     let process = Command::new("wpctl")
         .args(["get-volume", "@DEFAULT_SINK@"])
         .output()
-        .await
-        .unwrap();
+        .await?;
     let stdout = String::from_utf8_lossy(&process.stdout);
-    let volume = stdout[8..12].replace('.', "");
+    let volume = stdout[8..12].replace('.', "").parse()?;
 
-    volume.parse().unwrap()
+    Ok(volume)
+}
+
+// https://stackoverflow.com/a/35046243
+pub fn program_exists(program: &str) -> Result<(), Box<dyn Error>> {
+    let path = env::var("PATH")?;
+    for directory in path.split(":") {
+        let program_path = format!("{}/{}", directory, program);
+        if fs::metadata(program_path).is_ok() {
+            return Ok(());
+        }
+    }
+
+    Err(format!("Couldn't find {program}, is it installed?").into())
 }
