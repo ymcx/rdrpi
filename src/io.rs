@@ -116,3 +116,13 @@ pub async fn stop_stream(state: &mut MutexGuard<'_, AppState>) -> Result<bool, B
 
     Ok(true)
 }
+
+pub async fn pause_stream(state: &mut MutexGuard<'_, AppState>) -> Result<bool, Box<dyn Error>> {
+    let paused = if state.paused {
+        start_stream(state).await?
+    } else {
+        stop_stream(state).await?
+    };
+
+    Ok(paused)
+}

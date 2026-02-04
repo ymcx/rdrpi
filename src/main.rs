@@ -46,10 +46,13 @@ async fn change_stream(
 ) -> Redirect {
     let mut state = state.lock().await;
 
-    state.selection = form.selection;
-
-    io::stop_stream(&mut state).await.unwrap();
-    state.paused = io::start_stream(&mut state).await.unwrap();
+    state.paused = if state.selection == form.selection {
+        io::pause_stream(&mut state).await.unwrap()
+    } else {
+        state.selection = form.selection;
+        io::stop_stream(&mut state).await.unwrap();
+        io::start_stream(&mut state).await.unwrap()
+    };
 
     Redirect::to("/")
 }
@@ -68,18 +71,6 @@ async fn delete_stream(State(state): State<Arc<Mutex<AppState>>>) -> Redirect {
     io::write_streams(&state.stream_file, &state.streams).unwrap();
     io::stop_stream(&mut state).await.unwrap();
     state.paused = io::start_stream(&mut state).await.unwrap();
-
-    Redirect::to("/")
-}
-
-async fn pause_stream(State(state): State<Arc<Mutex<AppState>>>) -> Redirect {
-    let mut state = state.lock().await;
-
-    state.paused = if state.paused {
-        io::start_stream(&mut state).await.unwrap()
-    } else {
-        io::stop_stream(&mut state).await.unwrap()
-    };
 
     Redirect::to("/")
 }
@@ -119,7 +110,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .route("/add_stream", routing::post(add_stream))
         .route("/change_stream", routing::post(change_stream))
         .route("/delete_stream", routing::post(delete_stream))
-        .route("/pause_stream", routing::post(pause_stream))
         .route("/set_volume", routing::post(set_volume))
         .with_state(state);
 
