@@ -1,6 +1,7 @@
 <html>
     <head>
         <title>RDRPI</title>
+
         <script>
             function add_stream() {
                 const name = prompt("Enter the display name of the scream", "")
@@ -14,15 +15,24 @@
                 document.getElementById("add_stream").submit()
             }
         </script>
+
+        <style>
+            .streams {
+                display: grid;
+                grid-template-columns: repeat(4, 200px);
+            }
+
+            .selected {
+                color: #ff0000;
+            }
+        </style>
     </head>
 
     <body>
-        <form method="post" id="change_stream" action="/change_stream">
-            <select name="selection" onchange="form.submit()">
-                {% for stream in streams %}
-                    <option value="{{ loop.index0 }}" {% if loop.index0 == selection %}selected{% endif %}>{{ stream }}</option>
-                {% endfor %}
-            </select>
+        <form method="post" id="change_stream" action="/change_stream" class="streams">
+            {% for stream in streams %}
+                <button value="{{ loop.index0 }}" name="selection" onclick="form.submit()" {% if loop.index0 == selection %}class="selected"{% endif %}>{{ stream }}</button>
+            {% endfor %}
         </form>
 
         <form method="post" id="add_stream" action="/add_stream">
