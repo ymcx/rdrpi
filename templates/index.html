@@ -36,7 +36,7 @@
         </form>
 
         <form method="post" id="pause_stream" action="/pause_stream">
-            <button onclick="form.submit()">Play/Pause</button>
+            <button onclick="form.submit()">{% if paused %}Play{% else %}Pause{% endif %}</button>
         </form>
 
         <form method="post" id="set_volume" action="/set_volume">

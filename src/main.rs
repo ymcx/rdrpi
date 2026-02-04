@@ -15,6 +15,7 @@ mod types;
 async fn index(State(state): State<Arc<Mutex<AppState>>>) -> Html<String> {
     let state = state.lock().await;
     let template = Index {
+        paused: state.paused,
         streams: state.streams.iter().map(|(i, _)| i.to_string()).collect(),
         selection: state.selection,
         volume: state.volume,

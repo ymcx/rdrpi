@@ -14,6 +14,7 @@ pub struct AppState {
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct Index {
+    pub paused: bool,
     pub streams: Vec<String>,
     pub selection: usize,
     pub volume: u8,
