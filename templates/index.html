@@ -17,11 +17,10 @@
     </head>
 
     <body>
-        <form method="post" id="set_stream" action="/set_stream">
+        <form method="post" id="change_stream" action="/change_stream">
             <select name="selection" onchange="form.submit()">
-                <option value="0" {% if selection == 0 %}selected{% endif %}>Select a stream...</option>
                 {% for stream in streams %}
-                    <option value="{{ loop.index }}" {% if loop.index == selection %}selected{% endif %}>{{ stream }}</option>
+                    <option value="{{ loop.index0 }}" {% if loop.index0 == selection %}selected{% endif %}>{{ stream }}</option>
                 {% endfor %}
             </select>
         </form>
@@ -34,6 +33,10 @@
 
         <form method="post" id="delete_stream" action="/delete_stream">
             <button onclick="form.submit()">Delete the selected stream</button>
+        </form>
+
+        <form method="post" id="pause_stream" action="/pause_stream">
+            <button onclick="form.submit()">Play/Pause</button>
         </form>
 
         <form method="post" id="set_volume" action="/set_volume">

@@ -1,11 +1,11 @@
-use crate::types::Stream;
+use crate::types::{AppState, Stream};
 use std::{
     env,
     error::Error,
     fs::{self, File},
     io::{BufReader, BufWriter},
 };
-use tokio::process::{Child, Command};
+use tokio::{process::Command, sync::MutexGuard};
 
 fn get_argument_value(
     arguments: &Vec<String>,
@@ -29,14 +29,6 @@ pub fn get_arguments() -> (String, String, String) {
     let file = get_argument_value(&arguments, "-f", "--file").unwrap_or("streams.json".to_string());
 
     (ip, port, file)
-}
-
-pub fn set_stream(stream: &str) -> Result<Child, Box<dyn Error>> {
-    let process = Command::new("ffmpeg")
-        .args(["-vn", "-f", "pulse", "default", "-v", "quiet", "-i", stream])
-        .spawn()?;
-
-    Ok(process)
 }
 
 pub fn set_volume(volume: u8) -> Result<(), Box<dyn Error>> {
@@ -98,4 +90,29 @@ pub fn write_streams(
     serde_json::to_writer_pretty(writer, &streams)?;
 
     Ok(())
+}
+
+pub async fn start_stream(state: &mut MutexGuard<'_, AppState>) -> Result<bool, Box<dyn Error>> {
+    if state.streams.is_empty() {
+        return Ok(true);
+    }
+
+    let stream = state.streams[state.selection].1.to_string();
+    let process = Command::new("ffmpeg")
+        .args([
+            "-vn", "-f", "pulse", "default", "-v", "quiet", "-i", &stream,
+        ])
+        .spawn()?;
+
+    state.process = Some(process);
+
+    Ok(false)
+}
+
+pub async fn stop_stream(state: &mut MutexGuard<'_, AppState>) -> Result<bool, Box<dyn Error>> {
+    if let Some(process) = &mut state.process {
+        process.kill().await?;
+    }
+
+    Ok(true)
 }

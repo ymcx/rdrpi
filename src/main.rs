@@ -1,4 +1,4 @@
-use crate::types::{AppState, Index, SetStream, SetVolume, Stream};
+use crate::types::{AppState, ChangeStream, Index, SetVolume, Stream};
 use askama::Template;
 use axum::{
     Form, Router,
@@ -7,10 +7,7 @@ use axum::{
     routing,
 };
 use std::{error::Error, sync::Arc};
-use tokio::{
-    net::TcpListener,
-    sync::{Mutex, MutexGuard},
-};
+use tokio::{net::TcpListener, sync::Mutex};
 
 mod io;
 mod types;
@@ -26,64 +23,62 @@ async fn index(State(state): State<Arc<Mutex<AppState>>>) -> Html<String> {
     Html::from(template.render().unwrap())
 }
 
-async fn update_stream(state: &mut MutexGuard<'_, AppState>) -> Result<(), Box<dyn Error>> {
-    if let Some(process) = &mut state.process {
-        process.kill().await?;
-    }
-
-    if state.selection != 0 {
-        let stream = state
-            .streams
-            .get(state.selection - 1)
-            .unwrap()
-            .1
-            .to_string();
-        let process = io::set_stream(&stream)?;
-        state.process = Some(process);
-    }
-
-    Ok(())
-}
-
 async fn add_stream(
     State(state): State<Arc<Mutex<AppState>>>,
     Form(form): Form<Stream>,
 ) -> Redirect {
     let mut state = state.lock().await;
-    let mut streams = state.streams.clone();
-    streams.push((form.name, form.address));
 
-    state.streams = streams;
-    state.selection = state.streams.len();
+    state.streams.push((form.name, form.address));
+    state.selection = state.streams.len() - 1;
+
     io::write_streams(&state.stream_file, &state.streams).unwrap();
-    update_stream(&mut state).await.unwrap();
+    io::stop_stream(&mut state).await.unwrap();
+    state.paused = io::start_stream(&mut state).await.unwrap();
+
+    Redirect::to("/")
+}
+
+async fn change_stream(
+    State(state): State<Arc<Mutex<AppState>>>,
+    Form(form): Form<ChangeStream>,
+) -> Redirect {
+    let mut state = state.lock().await;
+
+    state.selection = form.selection;
+
+    io::stop_stream(&mut state).await.unwrap();
+    state.paused = io::start_stream(&mut state).await.unwrap();
 
     Redirect::to("/")
 }
 
 async fn delete_stream(State(state): State<Arc<Mutex<AppState>>>) -> Redirect {
     let mut state = state.lock().await;
-    if state.selection != 0 {
-        let mut streams = state.streams.clone();
-        streams.remove(state.selection - 1);
 
-        state.streams = streams;
-        let should_decrease = state.streams.len() == 0 || state.selection != 1;
-        state.selection -= if should_decrease { 1 } else { 0 };
-        io::write_streams(&state.stream_file, &state.streams).unwrap();
-        update_stream(&mut state).await.unwrap();
+    if state.streams.is_empty() {
+        return Redirect::to("/");
     }
+
+    let selection = state.selection;
+    state.streams.remove(selection);
+    state.selection = selection.saturating_sub(1);
+
+    io::write_streams(&state.stream_file, &state.streams).unwrap();
+    io::stop_stream(&mut state).await.unwrap();
+    state.paused = io::start_stream(&mut state).await.unwrap();
 
     Redirect::to("/")
 }
 
-async fn set_stream(
-    State(state): State<Arc<Mutex<AppState>>>,
-    Form(form): Form<SetStream>,
-) -> Redirect {
+async fn pause_stream(State(state): State<Arc<Mutex<AppState>>>) -> Redirect {
     let mut state = state.lock().await;
-    state.selection = form.selection;
-    update_stream(&mut state).await.unwrap();
+
+    state.paused = if state.paused {
+        io::start_stream(&mut state).await.unwrap()
+    } else {
+        io::stop_stream(&mut state).await.unwrap()
+    };
 
     Redirect::to("/")
 }
@@ -111,6 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let state = Arc::new(Mutex::new(AppState {
+        paused: true,
         process: None,
         selection: 0,
         stream_file: stream_file.to_string(),
@@ -120,8 +116,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let app = Router::new()
         .route("/", routing::get(index))
         .route("/add_stream", routing::post(add_stream))
+        .route("/change_stream", routing::post(change_stream))
         .route("/delete_stream", routing::post(delete_stream))
-        .route("/set_stream", routing::post(set_stream))
+        .route("/pause_stream", routing::post(pause_stream))
         .route("/set_volume", routing::post(set_volume))
         .with_state(state);
 

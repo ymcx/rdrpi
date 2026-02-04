@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tokio::process::Child;
 
 pub struct AppState {
+    pub paused: bool,
     pub process: Option<Child>,
     pub selection: usize,
     pub stream_file: String,
@@ -24,7 +25,7 @@ pub struct SetVolume {
 }
 
 #[derive(Deserialize)]
-pub struct SetStream {
+pub struct ChangeStream {
     pub selection: usize,
 }
 
