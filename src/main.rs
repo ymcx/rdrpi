@@ -31,11 +31,7 @@ async fn add_stream(
     let mut state = state.lock().await;
 
     state.streams.push((form.name, form.address));
-    state.selection = state.streams.len() - 1;
-
     io::write_streams(&state.stream_file, &state.streams).unwrap();
-    io::stop_stream(&mut state).await.unwrap();
-    state.paused = io::start_stream(&mut state).await.unwrap();
 
     Redirect::to("/")
 }
@@ -60,17 +56,13 @@ async fn change_stream(
 async fn delete_stream(State(state): State<Arc<Mutex<AppState>>>) -> Redirect {
     let mut state = state.lock().await;
 
-    if state.streams.is_empty() {
-        return Redirect::to("/");
+    if !state.streams.is_empty() {
+        let selection = state.selection;
+        state.streams.remove(selection);
+        state.selection = state.streams.len();
+        io::write_streams(&state.stream_file, &state.streams).unwrap();
+        state.paused = io::stop_stream(&mut state).await.unwrap();
     }
-
-    let selection = state.selection;
-    state.streams.remove(selection);
-    state.selection = selection.saturating_sub(1);
-
-    io::write_streams(&state.stream_file, &state.streams).unwrap();
-    io::stop_stream(&mut state).await.unwrap();
-    state.paused = io::start_stream(&mut state).await.unwrap();
 
     Redirect::to("/")
 }

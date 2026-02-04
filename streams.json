@@ -1,14 +1,10 @@
 [
   {
-    "name": "Yle Radio Suomi",
+    "name": "aaa",
     "address": "https://yleradiolive.akamaized.net/hls/live/2027675/in-YleRS/256/variant.m3u8"
   },
   {
-    "name": "hhh",
-    "address": "https://yleradiolive.akamaized.net/hls/live/2027675/in-YleRS/256/variant.m3u8"
-  },
-  {
-    "name": "hhh",
+    "name": "a",
     "address": "https://yleradiolive.akamaized.net/hls/live/2027675/in-YleRS/256/variant.m3u8"
   }
 ]
