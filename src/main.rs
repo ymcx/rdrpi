@@ -56,7 +56,7 @@ async fn change_stream(
 async fn delete_stream(State(state): State<Arc<Mutex<AppState>>>) -> Redirect {
     let mut state = state.lock().await;
 
-    if !state.streams.is_empty() {
+    if !state.streams.is_empty() && !state.paused {
         let selection = state.selection;
         state.streams.remove(selection);
         state.selection = state.streams.len();
