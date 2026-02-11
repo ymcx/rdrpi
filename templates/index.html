@@ -1,101 +1,33 @@
 <html>
-    <head>
-        <title>RDRPI</title>
 
-        <script>
-            function add_stream() {
-                const name = prompt("Enter the display name of the scream", "");
-                if (!name) return;
+<head>
+  <title>RDRPI</title>
+  <meta name="viewport" content="initial-scale=1.0">
+  <link href="assets/style.css" rel="stylesheet" />
+  <script src="assets/script.js"></script>
+</head>
 
-                const address = prompt("Enter the address of the stream", "");
-                if (!address) return;
+<body>
+  <form method="post" id="change_stream" action="/change_stream" class="streams">
+    {% for stream in streams %}
+    <button title="{{ stream }}" value="{{ loop.index0 }}" name="selection" onclick="form.submit()" class={% if
+      loop.index0==selection && !paused %}"stream-selected"{% else %}stream-unselected{% endif %}>{{ stream }}</button>
+    {% endfor %}
+  </form>
 
-                document.getElementById("name").value = name;
-                document.getElementById("address").value = address;
-                document.getElementById("add_stream").submit();
-            }
+  <form method="post" id="add_stream" action="/add_stream">
+    <input type="hidden" name="address" id="address">
+    <input type="hidden" name="name" id="name">
+    <button onclick="add_stream()">Add a stream</button>
+  </form>
 
-            function get_hash(string) {
-                let hash = 0;
-                for (let i = 0; i < string.length; i++) {
-                    hash += string.charCodeAt(i);
-                }
+  <form method="post" id="delete_stream" action="/delete_stream">
+    <button onclick="form.submit()">Delete the selected stream</button>
+  </form>
 
-                return hash;
-            }
+  <form method="post" id="set_volume" action="/set_volume">
+    <input type="range" min="0" max="100" value="{{ volume }}" name="volume" onchange="form.submit()">
+  </form>
+</body>
 
-            document.addEventListener("DOMContentLoaded", () => {
-                const colors = ["#f5e0dc", "#f2cdcd", "#f5c2e7", "#cba6f7", "#f38ba8", "#eba0ac", "#fab387", "#f9e2af", "#a6e3a1", "#94e2d5", "#89dceb", "#74c7ec", "#89b4fa", "#b4befe"];
-                const buttons = document.querySelectorAll("#change_stream button");
-
-                buttons.forEach((button) => {
-                    const hash = get_hash(button.textContent) % colors.length;
-                    button.style.setProperty("--stream-color", colors[hash]);
-                    button.textContent = button.textContent[0].toUpperCase();
-                });
-            });
-        </script>
-
-        <style>
-            :root {
-                --background: #ffffff;
-                --font-size: 32px;
-                --font-weight: 1000;
-                --stream-amount: 4;
-                --stream-border-size: 4px;
-                --stream-gap: 16px;
-                --stream-rounding: 16px;
-                --stream-size: 64px;
-            }
-
-            body {
-                background-color: var(--background);
-            }
-
-            .stream-unselected, .stream-selected {
-                background: var(--stream-color);
-                border-radius: var(--stream-rounding);
-                border: none;
-                color: #ffffff;
-                font-size: var(--font-size);
-                font-weight: var(--font-weight);
-                height: var(--stream-size);
-                place-items: center;
-                width: var(--stream-size);
-            }
-
-            .stream-selected {
-                outline: var(--stream-border-size) solid #000000;
-            }
-
-            .streams {
-                display: grid;
-                gap: var(--stream-gap);
-                grid-template-columns: repeat(auto-fit, var(--stream-size));
-                max-width: calc(var(--stream-amount) * var(--stream-size) + (var(--stream-amount) - 1) * var(--stream-gap));
-            }
-        </style>
-    </head>
-
-    <body>
-        <form method="post" id="change_stream" action="/change_stream" class="streams">
-            {% for stream in streams %}
-                <button title="{{ stream }}" value="{{ loop.index0 }}" name="selection" onclick="form.submit()" class={% if loop.index0 == selection && !paused %}"stream-selected"{% else %}stream-unselected{% endif %}>{{ stream }}</button>
-            {% endfor %}
-        </form>
-
-        <form method="post" id="add_stream" action="/add_stream">
-            <input type="hidden" name="address" id="address">
-            <input type="hidden" name="name" id="name">
-            <button onclick="add_stream()">Add a stream</button>
-        </form>
-
-        <form method="post" id="delete_stream" action="/delete_stream">
-            <button onclick="form.submit()">Delete the selected stream</button>
-        </form>
-
-        <form method="post" id="set_volume" action="/set_volume">
-            <input type="range" min="0" max="100" value="{{ volume }}" name="volume" onchange="form.submit()">
-        </form>
-    </body>
 </html>

@@ -1,0 +1,38 @@
+:root {
+  --background: #ffffff;
+  --font-size: 32px;
+  --font-weight: 1000;
+  --stream-amount: 4;
+  --stream-border-size: 4px;
+  --stream-gap: 16px;
+  --stream-rounding: 16px;
+  --stream-size: 64px;
+}
+
+body {
+  background-color: var(--background);
+}
+
+.stream-unselected,
+.stream-selected {
+  background: var(--stream-color);
+  border-radius: var(--stream-rounding);
+  border: none;
+  color: #ffffff;
+  font-size: var(--font-size);
+  font-weight: var(--font-weight);
+  height: var(--stream-size);
+  place-items: center;
+  width: var(--stream-size);
+}
+
+.stream-selected {
+  outline: var(--stream-border-size) solid #000000;
+}
+
+.streams {
+  display: grid;
+  gap: var(--stream-gap);
+  grid-template-columns: repeat(auto-fit, var(--stream-size));
+  max-width: calc(var(--stream-amount) * var(--stream-size) + (var(--stream-amount) - 1) * var(--stream-gap));
+}

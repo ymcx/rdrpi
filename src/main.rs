@@ -8,6 +8,7 @@ use axum::{
 };
 use std::{error::Error, sync::Arc};
 use tokio::{net::TcpListener, sync::Mutex};
+use tower_http::services::ServeDir;
 
 mod io;
 mod types;
@@ -98,6 +99,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         volume: io::get_volume().await?,
     }));
     let app = Router::new()
+        .nest_service("/assets", ServeDir::new("assets"))
         .route("/", routing::get(index))
         .route("/add_stream", routing::post(add_stream))
         .route("/change_stream", routing::post(change_stream))
